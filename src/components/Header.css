@@ -1,0 +1,212 @@
+.header {
+  position: sticky;
+  top: 0;
+  z-index: 100;
+  width: 100%;
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  background: rgba(10, 10, 20, 0.85);
+  border-bottom: 1px solid rgba(247, 147, 26, 0.15);
+  box-shadow: 0 4px 32px rgba(0, 0, 0, 0.3);
+}
+
+.header-inner {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 0 2rem;
+  height: 70px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1.5rem;
+}
+
+.logo-btn {
+  background: none;
+  border: none;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0;
+  text-decoration: none;
+}
+
+.logo-icon {
+  font-size: 1.6rem;
+  filter: drop-shadow(0 0 8px rgba(247, 147, 26, 0.8));
+  animation: glow-pulse 3s ease-in-out infinite;
+}
+
+@keyframes glow-pulse {
+  0%, 100% { filter: drop-shadow(0 0 8px rgba(247, 147, 26, 0.8)); }
+  50% { filter: drop-shadow(0 0 16px rgba(247, 147, 26, 1)); }
+}
+
+.logo-text {
+  font-size: 1.4rem;
+  font-weight: 800;
+  color: #fff;
+  letter-spacing: -0.02em;
+}
+
+.logo-accent {
+  background: linear-gradient(135deg, #f7931a, #ffb347);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+.nav {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  flex: 1;
+  padding-left: 2rem;
+}
+
+.nav-link {
+  background: none;
+  border: none;
+  cursor: pointer;
+  color: rgba(255, 255, 255, 0.65);
+  font-size: 0.9rem;
+  font-weight: 500;
+  padding: 0.4rem 0.8rem;
+  border-radius: 8px;
+  transition: all 0.2s ease;
+  font-family: inherit;
+}
+
+.nav-link:hover {
+  color: #fff;
+  background: rgba(247, 147, 26, 0.1);
+}
+
+.wallet-section {
+  display: flex;
+  align-items: center;
+}
+
+.connectors {
+  display: flex;
+  gap: 0.5rem;
+}
+
+.btn-wallet {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.6rem 1.2rem;
+  background: linear-gradient(135deg, #f7931a, #e8820a);
+  border: none;
+  border-radius: 12px;
+  color: #fff;
+  font-size: 0.875rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.25s ease;
+  letter-spacing: 0.02em;
+  box-shadow: 0 4px 16px rgba(247, 147, 26, 0.35);
+  font-family: inherit;
+}
+
+.btn-wallet:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 6px 24px rgba(247, 147, 26, 0.5);
+}
+
+.wallet-icon {
+  font-size: 1rem;
+}
+
+.wallet-connected {
+  position: relative;
+}
+
+.wallet-address-btn {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.55rem 1rem;
+  background: rgba(247, 147, 26, 0.12);
+  border: 1px solid rgba(247, 147, 26, 0.3);
+  border-radius: 12px;
+  color: #fff;
+  font-size: 0.85rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  font-family: "Courier New", monospace;
+}
+
+.wallet-address-btn:hover {
+  background: rgba(247, 147, 26, 0.2);
+  border-color: rgba(247, 147, 26, 0.5);
+}
+
+.wallet-dot {
+  width: 8px;
+  height: 8px;
+  background: #22c55e;
+  border-radius: 50%;
+  box-shadow: 0 0 8px rgba(34, 197, 94, 0.8);
+  animation: blink 2s ease-in-out infinite;
+  flex-shrink: 0;
+}
+
+@keyframes blink {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.4; }
+}
+
+.wallet-addr {
+  font-family: "Courier New", monospace;
+  font-size: 0.8rem;
+}
+
+.wallet-chevron {
+  font-size: 0.7rem;
+  color: rgba(255, 255, 255, 0.5);
+}
+
+.wallet-dropdown {
+  position: absolute;
+  top: calc(100% + 8px);
+  right: 0;
+  background: rgba(15, 15, 30, 0.98);
+  border: 1px solid rgba(247, 147, 26, 0.25);
+  border-radius: 14px;
+  padding: 1rem;
+  min-width: 240px;
+  box-shadow: 0 16px 48px rgba(0, 0, 0, 0.6);
+  backdrop-filter: blur(20px);
+}
+
+.wallet-full-addr {
+  font-family: "Courier New", monospace;
+  font-size: 0.72rem;
+  color: rgba(255, 255, 255, 0.5);
+  word-break: break-all;
+  margin-bottom: 0.75rem;
+  padding-bottom: 0.75rem;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.disconnect-btn {
+  width: 100%;
+  background: rgba(239, 68, 68, 0.1);
+  border: 1px solid rgba(239, 68, 68, 0.3);
+  border-radius: 10px;
+  color: #ef4444;
+  font-size: 0.85rem;
+  font-weight: 600;
+  padding: 0.5rem;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  font-family: inherit;
+}
+
+.disconnect-btn:hover {
+  background: rgba(239, 68, 68, 0.2);
+}
