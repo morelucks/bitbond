@@ -12,7 +12,10 @@ interface HeaderProps {
 
 export function Header({ onDashboardClick, onHomeClick, onCreateClick }: HeaderProps) {
     const { accounts, isConnected } = useAccounts();
-    const { connectors, connect, error } = useConnect();
+    // useConnect requires purposes argument in this version of @midl/react
+    const { connectors, connect, error } = useConnect({
+        purposes: [AddressPurpose.Ordinals, AddressPurpose.Payment]
+    });
     const { disconnect } = useDisconnect();
     const [showMenu, setShowMenu] = useState(false);
 
@@ -21,15 +24,19 @@ export function Header({ onDashboardClick, onHomeClick, onCreateClick }: HeaderP
         ? `${btcAddress.slice(0, 8)}…${btcAddress.slice(-6)}`
         : "";
 
-    const handleConnect = async (connector: any) => {
+    const handleConnect = async (connectorId: string) => {
         try {
-            console.log("Connecting to:", connector.name, connector.id);
-            // Midl useConnect usually takes { connector } or { id }
-            // We'll try passing the connector object which is standard wagmi v2
-            connect({ connector });
+            console.log("Connecting to ID:", connectorId);
+            connect({ id: connectorId });
         } catch (err: any) {
             console.error("Connect error:", err);
-            toast.error("Failed to connect wallet", { description: err.message });
+            if (err.message.includes("AddressNetworkMismatch")) {
+                toast.error("Network Mismatch", {
+                    description: "Please switch your Xverse wallet to Testnet."
+                });
+            } else {
+                toast.error("Failed to connect wallet", { description: err.message });
+            }
         }
     };
 
@@ -71,10 +78,10 @@ export function Header({ onDashboardClick, onHomeClick, onCreateClick }: HeaderP
                                 <button
                                     key={connector.id}
                                     className="btn btn-wallet"
-                                    onClick={() => handleConnect(connector)}
+                                    onClick={() => handleConnect(connector.id)}
                                 >
                                     <span className="wallet-icon">🔗</span>
-                                    Connect {connector.name}
+                                    Connect {(connector as any).name || "Wallet"}
                                 </button>
                             ))}
                             {connectors.length === 0 && (

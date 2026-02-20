@@ -1,8 +1,8 @@
-import { createConfig, regtest } from "@midl/core";
+import { createConfig, testnet } from "@midl/core";
 import { xverseConnector } from "@midl/connectors";
 
 export const midlConfig = createConfig({
-    networks: [regtest],
+    networks: [testnet],
     connectors: [xverseConnector()],
     persist: true,
 });
