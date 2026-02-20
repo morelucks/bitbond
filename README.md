@@ -169,7 +169,7 @@ Open [http://localhost:5173](http://localhost:5173)
 
 ## 👥 Team
 
-Built by **morelucks** for the Midl VibeHack 2025
+Built by **morelucks** for the Midl VibeHack 2026
 
 ---
 
