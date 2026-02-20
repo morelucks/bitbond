@@ -4,6 +4,7 @@ import { MidlProvider } from "@midl/react";
 import { WagmiMidlProvider } from "@midl/executor-react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { WagmiProvider } from "wagmi";
+import { Toaster } from "sonner";
 import { midlConfig } from "./config/midlConfig";
 import { wagmiConfig } from "./config/wagmiConfig";
 import App from "./App";
@@ -17,6 +18,7 @@ ReactDOM.createRoot(document.getElementById("root")!).render(
       <WagmiProvider config={wagmiConfig}>
         <QueryClientProvider client={queryClient}>
           <WagmiMidlProvider>
+            <Toaster position="top-right" theme="dark" richColors />
             <App />
           </WagmiMidlProvider>
         </QueryClientProvider>

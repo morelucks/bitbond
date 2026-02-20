@@ -166,6 +166,30 @@
     padding: 1.5rem 1.75rem 1.75rem;
 }
 
+/* Demo Fill Button */
+.demo-fill-container {
+    display: flex;
+    justify-content: flex-end;
+    margin-top: -0.5rem;
+}
+
+.btn-demo-fill {
+    background: rgba(247, 147, 26, 0.1);
+    color: #f7931a;
+    border: 1px dashed rgba(247, 147, 26, 0.3);
+    font-size: 0.75rem;
+    padding: 0.25rem 0.5rem;
+    border-radius: 6px;
+    cursor: pointer;
+    transition: all 0.2s;
+    font-weight: 600;
+}
+
+.btn-demo-fill:hover {
+    background: rgba(247, 147, 26, 0.2);
+    border-color: #f7931a;
+}
+
 .form {
     display: flex;
     flex-direction: column;

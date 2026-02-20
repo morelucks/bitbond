@@ -8,6 +8,7 @@ import {
 import { useWaitForTransaction } from "@midl/react";
 import { usePublicClient } from "wagmi";
 import { encodeFunctionData, parseEther } from "viem";
+import { toast } from "sonner";
 import { BitBondEscrow } from "../contracts/BitBondEscrow";
 import "./CreateEscrowModal.css";
 
@@ -19,7 +20,7 @@ interface CreateEscrowModalProps {
 type Step = "form" | "intention" | "finalize" | "sign" | "broadcast" | "done";
 
 export function CreateEscrowModal({ onClose, onSuccess }: CreateEscrowModalProps) {
-    const { accounts } = useAccounts();
+    // const { accounts } = useAccounts(); // Unused
     const { addTxIntention, txIntentions } = useAddTxIntention();
     const { finalizeBTCTransaction, data: btcTxData } = useFinalizeBTCTransaction();
     const { signIntentionAsync } = useSignIntention();
@@ -28,13 +29,13 @@ export function CreateEscrowModal({ onClose, onSuccess }: CreateEscrowModalProps
         mutation: {
             onSuccess: () => {
                 setStep("done");
+                toast.success("Transaction confirmed on Bitcoin!");
             },
         },
     });
 
     const [step, setStep] = useState<Step>("form");
     const [loading, setLoading] = useState(false);
-    const [error, setError] = useState<string | null>(null);
     const [txHash, setTxHash] = useState<string | null>(null);
 
     const [form, setForm] = useState({
@@ -46,7 +47,6 @@ export function CreateEscrowModal({ onClose, onSuccess }: CreateEscrowModalProps
 
     const handleChange = (key: keyof typeof form, value: string) => {
         setForm((prev) => ({ ...prev, [key]: value }));
-        setError(null);
     };
 
     const validate = () => {
@@ -63,12 +63,28 @@ export function CreateEscrowModal({ onClose, onSuccess }: CreateEscrowModalProps
         return null;
     };
 
+    // Helper for judges
+    const fillDemoData = () => {
+        const tomorrow = new Date();
+        tomorrow.setDate(tomorrow.getDate() + 7);
+
+        setForm({
+            freelancer: "0x70997970C51812dc3A010C7d01b50e0d17dc79C8", // Hardhat Account #1
+            amount: "0.0001",
+            description: "Build a stunning landing page for the new AI project using React and Tailwind.",
+            deadline: tomorrow.toISOString().slice(0, 16),
+        });
+        toast.info("Demo data filled!", { description: "Ready to create escrow." });
+    };
+
     // Step 1: Add transaction intention
     const handleAddIntention = async () => {
         const err = validate();
-        if (err) { setError(err); return; }
+        if (err) { toast.error(err); return; }
+
         setLoading(true);
-        setError(null);
+        const toastId = toast.loading("Adding transaction intention...");
+
         try {
             const deadlineTs = BigInt(Math.floor(new Date(form.deadline).getTime() / 1000));
             addTxIntention({
@@ -86,8 +102,9 @@ export function CreateEscrowModal({ onClose, onSuccess }: CreateEscrowModalProps
                 },
             });
             setStep("finalize");
+            toast.success("Intention added!", { id: toastId });
         } catch (e: any) {
-            setError(e.message || "Failed to add transaction intention");
+            toast.error("Failed to add intention", { description: e.message, id: toastId });
         } finally {
             setLoading(false);
         }
@@ -96,12 +113,13 @@ export function CreateEscrowModal({ onClose, onSuccess }: CreateEscrowModalProps
     // Step 2: Finalize BTC transaction
     const handleFinalize = async () => {
         setLoading(true);
-        setError(null);
+        const toastId = toast.loading("Calculating BTC fees...");
         try {
             await finalizeBTCTransaction();
             setStep("sign");
+            toast.success("BTC transaction prepared", { id: toastId });
         } catch (e: any) {
-            setError(e.message || "Failed to finalize BTC transaction");
+            toast.error("Failed to finalize", { description: e.message, id: toastId });
         } finally {
             setLoading(false);
         }
@@ -109,16 +127,17 @@ export function CreateEscrowModal({ onClose, onSuccess }: CreateEscrowModalProps
 
     // Step 3: Sign all intentions
     const handleSign = async () => {
-        if (!btcTxData) { setError("BTC transaction not finalized yet"); return; }
+        if (!btcTxData) { toast.error("BTC transaction missing"); return; }
         setLoading(true);
-        setError(null);
+        const toastId = toast.loading("Waiting for wallet signature...");
         try {
             for (const intention of txIntentions) {
                 await signIntentionAsync({ intention, txId: btcTxData.tx.id });
             }
             setStep("broadcast");
+            toast.success("Signed successfully!", { id: toastId });
         } catch (e: any) {
-            setError(e.message || "Failed to sign intentions");
+            toast.error("Signature rejected", { description: e.message, id: toastId });
         } finally {
             setLoading(false);
         }
@@ -126,21 +145,26 @@ export function CreateEscrowModal({ onClose, onSuccess }: CreateEscrowModalProps
 
     // Step 4: Broadcast
     const handleBroadcast = async () => {
-        if (!btcTxData) { setError("BTC transaction not finalized yet"); return; }
-        if (!publicClient) { setError("No public client available"); return; }
+        if (!btcTxData) { toast.error("BTC transaction missing"); return; }
+        if (!publicClient) { toast.error("Public client missing"); return; }
         setLoading(true);
-        setError(null);
+        const toastId = toast.loading("Broadcasting to Bitcoin network...");
+
         try {
-            await publicClient.sendBTCTransactions({
+            await (publicClient as any).sendBTCTransactions({
                 serializedTransactions: txIntentions.map(
                     (it) => it.signedEvmTransaction as `0x${string}`
                 ),
                 btcTransaction: btcTxData.tx.hex,
             });
             setTxHash(btcTxData.tx.id);
+            toast.success("Transaction broadcasted!", {
+                description: "Waiting for confirmation...",
+                id: toastId
+            });
             waitForTransaction({ txId: btcTxData.tx.id });
         } catch (e: any) {
-            setError(e.message || "Failed to broadcast transaction");
+            toast.error("Broadcast failed", { description: e.message, id: toastId });
         } finally {
             setLoading(false);
         }
@@ -166,7 +190,7 @@ export function CreateEscrowModal({ onClose, onSuccess }: CreateEscrowModalProps
                         <h2 className="modal-title">Create Escrow</h2>
                         <p className="modal-subtitle">Lock BTC funds until work is approved</p>
                     </div>
-                    <button className="modal-close" id="modal-close-btn" onClick={onClose}>✕</button>
+                    <button className="modal-close" onClick={onClose}>✕</button>
                 </div>
 
                 {/* Progress */}
@@ -185,6 +209,12 @@ export function CreateEscrowModal({ onClose, onSuccess }: CreateEscrowModalProps
                     {/* STEP: Form */}
                     {(step === "form" || step === "intention") && (
                         <div className="form">
+                            <div className="demo-fill-container">
+                                <button type="button" className="btn-demo-fill" onClick={fillDemoData}>
+                                    ✨ Auto-Fill Demo Data
+                                </button>
+                            </div>
+
                             <div className="field">
                                 <label className="field-label" htmlFor="freelancer-addr">Freelancer EVM Address</label>
                                 <input
@@ -233,11 +263,8 @@ export function CreateEscrowModal({ onClose, onSuccess }: CreateEscrowModalProps
                                 />
                             </div>
 
-                            {error && <div className="error-box" id="form-error">{error}</div>}
-
                             <button
                                 className="btn btn-primary btn-full"
-                                id="btn-add-intention"
                                 onClick={handleAddIntention}
                                 disabled={loading}
                             >
@@ -253,10 +280,8 @@ export function CreateEscrowModal({ onClose, onSuccess }: CreateEscrowModalProps
                             <div className="step-icon">⚙️</div>
                             <h3>Calculate Transaction Costs</h3>
                             <p>Midl will calculate the optimal Bitcoin fee and prepare the BTC transaction that anchors your escrow on-chain.</p>
-                            {error && <div className="error-box">{error}</div>}
                             <button
                                 className="btn btn-primary btn-full"
-                                id="btn-finalize"
                                 onClick={handleFinalize}
                                 disabled={loading}
                             >
@@ -272,10 +297,8 @@ export function CreateEscrowModal({ onClose, onSuccess }: CreateEscrowModalProps
                             <div className="step-icon">✍️</div>
                             <h3>Sign with Xverse</h3>
                             <p>Your Xverse wallet will prompt you to sign the transaction. This authorizes locking your funds in the BitBond escrow contract.</p>
-                            {error && <div className="error-box">{error}</div>}
                             <button
                                 className="btn btn-primary btn-full"
-                                id="btn-sign"
                                 onClick={handleSign}
                                 disabled={loading}
                             >
@@ -291,10 +314,8 @@ export function CreateEscrowModal({ onClose, onSuccess }: CreateEscrowModalProps
                             <div className="step-icon">📡</div>
                             <h3>Broadcast to Bitcoin</h3>
                             <p>Your signed transaction will be broadcast to the Bitcoin network via Midl RPC. Funds will be locked in the escrow contract.</p>
-                            {error && <div className="error-box">{error}</div>}
                             <button
                                 className="btn btn-primary btn-full"
-                                id="btn-broadcast"
                                 onClick={handleBroadcast}
                                 disabled={loading}
                             >
@@ -324,7 +345,6 @@ export function CreateEscrowModal({ onClose, onSuccess }: CreateEscrowModalProps
                                         target="_blank"
                                         rel="noopener noreferrer"
                                         className="tx-link"
-                                        id="tx-explorer-link"
                                     >
                                         {txHash.slice(0, 20)}…{txHash.slice(-10)} ↗
                                     </a>
@@ -332,7 +352,6 @@ export function CreateEscrowModal({ onClose, onSuccess }: CreateEscrowModalProps
                             )}
                             <button
                                 className="btn btn-primary btn-full"
-                                id="btn-view-escrow"
                                 onClick={() => onSuccess(1n)} // ID will come from contract event in production
                             >
                                 View Escrow →

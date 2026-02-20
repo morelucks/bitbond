@@ -9,6 +9,8 @@ import { useWaitForTransaction } from "@midl/react";
 import { usePublicClient } from "wagmi";
 import { encodeFunctionData } from "viem";
 import { useState } from "react";
+import confetti from "canvas-confetti";
+import { toast } from "sonner";
 import { BitBondEscrow, EscrowStatusLabels } from "../contracts/BitBondEscrow";
 import "./EscrowDetail.css";
 
@@ -46,15 +48,30 @@ export function EscrowDetail({ escrowId, onBack }: EscrowDetailProps) {
     const { finalizeBTCTransaction, data: btcTxData } = useFinalizeBTCTransaction();
     const { signIntentionAsync } = useSignIntention();
     const publicClient = usePublicClient();
-    const { waitForTransaction } = useWaitForTransaction({
-        mutation: { onSuccess: () => { setTxStep("done"); refetch(); } },
-    });
 
     const [txStep, setTxStep] = useState<TxStep>("idle");
     const [actionType, setActionType] = useState<"release" | "dispute" | "refund" | null>(null);
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState<string | null>(null);
     const [txHash, setTxHash] = useState<string | null>(null);
+
+    const { waitForTransaction } = useWaitForTransaction({
+        mutation: {
+            onSuccess: () => {
+                setTxStep("done");
+                refetch();
+                toast.success("Transaction confirmed!");
+                if (actionType === "release") {
+                    confetti({
+                        particleCount: 150,
+                        spread: 70,
+                        origin: { y: 0.6 },
+                        colors: ["#f7931a", "#ffffff", "#22c55e"]
+                    });
+                }
+            }
+        },
+    });
 
     if (isLoading) {
         return (
@@ -84,10 +101,13 @@ export function EscrowDetail({ escrowId, onBack }: EscrowDetailProps) {
     const isDeadlinePassed = deadline < new Date();
 
     // ── Midl Transaction Flow ──
+    // Fix args type error by using any[] or properly typed tuple
     const initAction = async (type: "release" | "dispute" | "refund", fnName: string, args: any[]) => {
         setActionType(type);
         setLoading(true);
         setError(null);
+        const toastId = toast.loading("Adding intention...");
+
         try {
             addTxIntention({
                 reset: true,
@@ -97,14 +117,16 @@ export function EscrowDetail({ escrowId, onBack }: EscrowDetailProps) {
                         data: encodeFunctionData({
                             abi: BitBondEscrow.abi,
                             functionName: fnName as any,
-                            args,
+                            args: args as any, // Cast to any to satisfy Viem's strict typing for now
                         }),
                     },
                 },
             });
             setTxStep("finalize");
+            toast.success("Intention added!", { id: toastId });
         } catch (err: any) {
             setError(err.message);
+            toast.error("Failed to add intention", { description: err.message, id: toastId });
         } finally {
             setLoading(false);
         }
@@ -113,39 +135,57 @@ export function EscrowDetail({ escrowId, onBack }: EscrowDetailProps) {
     const handleFinalize = async () => {
         setLoading(true);
         setError(null);
+        const toastId = toast.loading("Finalizing BTC transaction...");
         try {
             await finalizeBTCTransaction();
             setTxStep("sign");
-        } catch (err: any) { setError(err.message); }
-        finally { setLoading(false); }
+            toast.success("Ready to sign!", { id: toastId });
+        } catch (err: any) {
+            setError(err.message);
+            toast.error("Finalize failed", { description: err.message, id: toastId });
+        } finally {
+            setLoading(false);
+        }
     };
 
     const handleSign = async () => {
         if (!btcTxData) return;
         setLoading(true);
+        const toastId = toast.loading("Waiting for signature...");
         setError(null);
         try {
             for (const intention of txIntentions) {
                 await signIntentionAsync({ intention, txId: btcTxData.tx.id });
             }
             setTxStep("broadcast");
-        } catch (err: any) { setError(err.message); }
-        finally { setLoading(false); }
+            toast.success("Signed!", { id: toastId });
+        } catch (err: any) {
+            setError(err.message);
+            toast.error("Signing failed", { description: err.message, id: toastId });
+        } finally {
+            setLoading(false);
+        }
     };
 
     const handleBroadcast = async () => {
         if (!btcTxData || !publicClient) return;
         setLoading(true);
         setError(null);
+        const toastId = toast.loading("Broadcasting...");
         try {
-            await publicClient.sendBTCTransactions({
+            await (publicClient as any).sendBTCTransactions({
                 serializedTransactions: txIntentions.map((it) => it.signedEvmTransaction as `0x${string}`),
                 btcTransaction: btcTxData.tx.hex,
             });
             setTxHash(btcTxData.tx.id);
             waitForTransaction({ txId: btcTxData.tx.id });
-        } catch (err: any) { setError(err.message); }
-        finally { setLoading(false); }
+            toast.success("Broadcasted! Waiting for block...", { id: toastId });
+        } catch (err: any) {
+            setError(err.message);
+            toast.error("Broadcast failed", { description: err.message, id: toastId });
+        } finally {
+            setLoading(false);
+        }
     };
 
     const resetFlow = () => {
@@ -154,10 +194,19 @@ export function EscrowDetail({ escrowId, onBack }: EscrowDetailProps) {
         setError(null);
     };
 
+    // Logic helpers for UI states
+    const isFinalizeActive = txStep === "finalize";
+    const isSignActive = txStep === "sign";
+    const isBroadcastActive = txStep === "broadcast";
+
+    const isFinalizeDone = ["sign", "broadcast", "done"].includes(txStep);
+    const isSignDone = ["broadcast", "done"].includes(txStep);
+    const isBroadcastDone = txStep === "done";
+
     return (
         <div className="detail" id={`escrow-detail-${escrowId}`}>
             {/* Back */}
-            <button className="back-btn" id="detail-back-btn" onClick={onBack}>
+            <button className="back-btn" onClick={onBack}>
                 ← Back to Dashboard
             </button>
 
@@ -191,7 +240,6 @@ export function EscrowDetail({ escrowId, onBack }: EscrowDetailProps) {
                         href={`https://blockscout.staging.midl.xyz/address/${e.client}`}
                         target="_blank"
                         rel="noopener noreferrer"
-                        id="client-address-link"
                     >
                         {e.client.slice(0, 12)}…{e.client.slice(-8)} ↗
                     </a>
@@ -203,7 +251,6 @@ export function EscrowDetail({ escrowId, onBack }: EscrowDetailProps) {
                         href={`https://blockscout.staging.midl.xyz/address/${e.freelancer}`}
                         target="_blank"
                         rel="noopener noreferrer"
-                        id="freelancer-address-link"
                     >
                         {e.freelancer.slice(0, 12)}…{e.freelancer.slice(-8)} ↗
                     </a>
@@ -223,14 +270,13 @@ export function EscrowDetail({ escrowId, onBack }: EscrowDetailProps) {
 
             {/* TX Hash (if exists) */}
             {txHash && (
-                <div className="tx-proof-card" id="tx-proof-card">
+                <div className="tx-proof-card">
                     <span className="tx-proof-label">🧾 On-Chain Proof</span>
                     <a
                         href={`https://blockscout.staging.midl.xyz/tx/${txHash}`}
                         target="_blank"
                         rel="noopener noreferrer"
                         className="tx-proof-hash"
-                        id="tx-proof-link"
                     >
                         {txHash} ↗
                     </a>
@@ -239,14 +285,13 @@ export function EscrowDetail({ escrowId, onBack }: EscrowDetailProps) {
 
             {/* Action Panel */}
             {txStep === "idle" && status === 1 && (
-                <div className="action-panel" id="action-panel">
+                <div className="action-panel">
                     <h3 className="action-panel-title">Actions</h3>
                     <div className="action-buttons">
                         {isClient && (
                             <>
                                 <button
                                     className="btn btn-release"
-                                    id="btn-release-funds"
                                     onClick={() => initAction("release", "releaseFunds", [escrowId])}
                                     disabled={loading}
                                 >
@@ -255,7 +300,6 @@ export function EscrowDetail({ escrowId, onBack }: EscrowDetailProps) {
                                 {isDeadlinePassed && (
                                     <button
                                         className="btn btn-refund"
-                                        id="btn-refund"
                                         onClick={() => initAction("refund", "refundAfterDeadline", [escrowId])}
                                         disabled={loading}
                                     >
@@ -266,7 +310,6 @@ export function EscrowDetail({ escrowId, onBack }: EscrowDetailProps) {
                         )}
                         <button
                             className="btn btn-dispute"
-                            id="btn-dispute"
                             onClick={() => initAction("dispute", "raiseDispute", [escrowId])}
                             disabled={loading}
                         >
@@ -278,7 +321,7 @@ export function EscrowDetail({ escrowId, onBack }: EscrowDetailProps) {
 
             {/* Midl Multi-step TX flow */}
             {txStep !== "idle" && txStep !== "done" && (
-                <div className="tx-flow-card" id="tx-flow-card">
+                <div className="tx-flow-card">
                     <div className="tx-flow-header">
                         <span className="tx-flow-title">
                             {actionType === "release" ? "🔓 Releasing Funds" :
@@ -289,30 +332,27 @@ export function EscrowDetail({ escrowId, onBack }: EscrowDetailProps) {
                     {error && <div className="error-box">{error}</div>}
                     <div className="tx-flow-steps">
                         <button
-                            className={`tx-step-btn ${txStep === "finalize" ? "active" : txStep !== "idle" ? "done" : ""}`}
-                            id="txflow-finalize"
+                            className={`tx-step-btn ${isFinalizeActive ? "active" : isFinalizeDone ? "done" : ""}`}
                             onClick={handleFinalize}
-                            disabled={loading || txStep !== "finalize"}
+                            disabled={loading || !isFinalizeActive}
                         >
-                            {loading && txStep === "finalize" ? <span className="spinner" /> : null}
+                            {loading && isFinalizeActive ? <span className="spinner" /> : null}
                             1. Finalize BTC Transaction
                         </button>
                         <button
-                            className={`tx-step-btn ${txStep === "sign" ? "active" : (txStep === "broadcast" || txStep === "done") ? "done" : ""}`}
-                            id="txflow-sign"
+                            className={`tx-step-btn ${isSignActive ? "active" : isSignDone ? "done" : ""}`}
                             onClick={handleSign}
-                            disabled={loading || txStep !== "sign"}
+                            disabled={loading || !isSignActive}
                         >
-                            {loading && txStep === "sign" ? <span className="spinner" /> : null}
+                            {loading && isSignActive ? <span className="spinner" /> : null}
                             2. Sign with Xverse
                         </button>
                         <button
-                            className={`tx-step-btn ${txStep === "broadcast" ? "active" : txStep === "done" ? "done" : ""}`}
-                            id="txflow-broadcast"
+                            className={`tx-step-btn ${isBroadcastActive ? "active" : isBroadcastDone ? "done" : ""}`}
                             onClick={handleBroadcast}
-                            disabled={loading || txStep !== "broadcast"}
+                            disabled={loading || !isBroadcastActive}
                         >
-                            {loading && txStep === "broadcast" ? <span className="spinner" /> : null}
+                            {loading && isBroadcastActive ? <span className="spinner" /> : null}
                             3. Broadcast to Bitcoin
                         </button>
                     </div>
@@ -320,7 +360,7 @@ export function EscrowDetail({ escrowId, onBack }: EscrowDetailProps) {
             )}
 
             {txStep === "done" && (
-                <div className="success-card" id="success-card">
+                <div className="success-card">
                     <span className="success-icon">🎉</span>
                     <h3>Transaction Complete!</h3>
                     <p>The action has been confirmed on-chain.</p>
@@ -330,7 +370,6 @@ export function EscrowDetail({ escrowId, onBack }: EscrowDetailProps) {
                             target="_blank"
                             rel="noopener noreferrer"
                             className="explorer-link"
-                            id="success-explorer-link"
                         >
                             View on Explorer ↗
                         </a>
