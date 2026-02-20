@@ -1,6 +1,7 @@
 import { AddressPurpose } from "@midl/core";
 import { useConnect, useAccounts, useDisconnect } from "@midl/react";
 import { useState } from "react";
+import { toast } from "sonner";
 import "./Header.css";
 
 interface HeaderProps {
@@ -11,7 +12,7 @@ interface HeaderProps {
 
 export function Header({ onDashboardClick, onHomeClick, onCreateClick }: HeaderProps) {
     const { accounts, isConnected } = useAccounts();
-    const { connectors, connect } = useConnect({ purposes: [AddressPurpose.Ordinals] });
+    const { connectors, connect, error } = useConnect();
     const { disconnect } = useDisconnect();
     const [showMenu, setShowMenu] = useState(false);
 
@@ -20,11 +21,27 @@ export function Header({ onDashboardClick, onHomeClick, onCreateClick }: HeaderP
         ? `${btcAddress.slice(0, 8)}…${btcAddress.slice(-6)}`
         : "";
 
+    const handleConnect = async (connector: any) => {
+        try {
+            console.log("Connecting to:", connector.name, connector.id);
+            // Midl useConnect usually takes { connector } or { id }
+            // We'll try passing the connector object which is standard wagmi v2
+            connect({ connector });
+        } catch (err: any) {
+            console.error("Connect error:", err);
+            toast.error("Failed to connect wallet", { description: err.message });
+        }
+    };
+
+    if (error) {
+        console.error("useConnect error state:", error);
+    }
+
     return (
         <header className="header">
             <div className="header-inner">
                 {/* Logo */}
-                <button className="logo-btn" onClick={onHomeClick} id="logo-btn">
+                <button className="logo-btn" onClick={onHomeClick}>
                     <span className="logo-icon">₿</span>
                     <span className="logo-text">
                         Bit<span className="logo-accent">Bond</span>
@@ -32,16 +49,16 @@ export function Header({ onDashboardClick, onHomeClick, onCreateClick }: HeaderP
                 </button>
 
                 <nav className="nav">
-                    <button className="nav-link" onClick={onHomeClick} id="nav-home">
+                    <button className="nav-link" onClick={onHomeClick}>
                         Home
                     </button>
                     {isConnected && (
-                        <button className="nav-link" onClick={onDashboardClick} id="nav-dashboard">
+                        <button className="nav-link" onClick={onDashboardClick}>
                             Dashboard
                         </button>
                     )}
                     {isConnected && (
-                        <button className="btn btn-primary btn-sm" onClick={onCreateClick} id="nav-create">
+                        <button className="btn btn-primary btn-sm" onClick={onCreateClick}>
                             + New Escrow
                         </button>
                     )}
@@ -54,19 +71,22 @@ export function Header({ onDashboardClick, onHomeClick, onCreateClick }: HeaderP
                                 <button
                                     key={connector.id}
                                     className="btn btn-wallet"
-                                    id={`connect-${connector.id}`}
-                                    onClick={() => connect({ id: connector.id })}
+                                    onClick={() => handleConnect(connector)}
                                 >
                                     <span className="wallet-icon">🔗</span>
-                                    Connect Xverse
+                                    Connect {connector.name}
                                 </button>
                             ))}
+                            {connectors.length === 0 && (
+                                <div className="no-connectors">
+                                    No wallets found. Install Xverse.
+                                </div>
+                            )}
                         </div>
                     ) : (
                         <div className="wallet-connected">
                             <button
                                 className="wallet-address-btn"
-                                id="wallet-address-btn"
                                 onClick={() => setShowMenu(!showMenu)}
                             >
                                 <span className="wallet-dot" />
@@ -78,7 +98,6 @@ export function Header({ onDashboardClick, onHomeClick, onCreateClick }: HeaderP
                                     <div className="wallet-full-addr">{btcAddress}</div>
                                     <button
                                         className="disconnect-btn"
-                                        id="disconnect-btn"
                                         onClick={() => { disconnect(); setShowMenu(false); }}
                                     >
                                         Disconnect
