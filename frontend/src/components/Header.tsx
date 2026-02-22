@@ -1,6 +1,6 @@
 import { AddressPurpose } from "@midl/core";
 import { useConnect, useAccounts, useDisconnect } from "@midl/react";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { toast } from "sonner";
 import "./Header.css";
 
@@ -19,6 +19,12 @@ export function Header({ onDashboardClick, onHomeClick, onCreateClick }: HeaderP
     const { disconnect } = useDisconnect();
     const [showMenu, setShowMenu] = useState(false);
 
+    // Debug logging
+    useEffect(() => {
+        console.log("Wallet state:", { isConnected, accounts, connectors: connectors.length });
+        console.log("Xverse available:", typeof window !== 'undefined' ? !!(window as any).XverseProviders : false);
+    }, [isConnected, accounts, connectors]);
+
     const btcAddress = accounts?.[0]?.address;
     const shortAddr = btcAddress
         ? `${btcAddress.slice(0, 8)}…${btcAddress.slice(-6)}`
@@ -27,15 +33,36 @@ export function Header({ onDashboardClick, onHomeClick, onCreateClick }: HeaderP
     const handleConnect = async (connectorId: string) => {
         try {
             console.log("Connecting to ID:", connectorId);
-            connect({ id: connectorId });
+            console.log("Available connectors:", connectors);
+            
+            // Check if Xverse is installed
+            if (typeof window !== 'undefined' && !(window as any).XverseProviders) {
+                toast.error("Xverse Wallet Not Found", {
+                    description: "Please install Xverse wallet extension first.",
+                    action: {
+                        label: "Install",
+                        onClick: () => window.open("https://www.xverse.app/download", "_blank")
+                    }
+                });
+                return;
+            }
+            
+            await connect({ id: connectorId });
+            toast.success("Wallet Connected!");
         } catch (err: any) {
             console.error("Connect error:", err);
-            if (err.message.includes("AddressNetworkMismatch")) {
+            if (err.message?.includes("AddressNetworkMismatch")) {
                 toast.error("Network Mismatch", {
                     description: "Please switch your Xverse wallet to Testnet."
                 });
+            } else if (err.message?.includes("User rejected")) {
+                toast.error("Connection Rejected", {
+                    description: "You rejected the connection request."
+                });
             } else {
-                toast.error("Failed to connect wallet", { description: err.message });
+                toast.error("Failed to connect wallet", { 
+                    description: err.message || "Unknown error occurred" 
+                });
             }
         }
     };
@@ -74,20 +101,25 @@ export function Header({ onDashboardClick, onHomeClick, onCreateClick }: HeaderP
                 <div className="wallet-section">
                     {!isConnected ? (
                         <div className="connectors">
-                            {connectors.map((connector) => (
+                            {connectors.length > 0 ? (
+                                connectors.map((connector) => (
+                                    <button
+                                        key={connector.id}
+                                        className="btn btn-wallet"
+                                        onClick={() => handleConnect(connector.id)}
+                                    >
+                                        <span className="wallet-icon">🔗</span>
+                                        Connect {(connector as any).name || "Xverse"}
+                                    </button>
+                                ))
+                            ) : (
                                 <button
-                                    key={connector.id}
                                     className="btn btn-wallet"
-                                    onClick={() => handleConnect(connector.id)}
+                                    onClick={() => window.open("https://www.xverse.app/download", "_blank")}
                                 >
-                                    <span className="wallet-icon">🔗</span>
-                                    Connect {(connector as any).name || "Wallet"}
+                                    <span className="wallet-icon">⚠️</span>
+                                    Install Xverse Wallet
                                 </button>
-                            ))}
-                            {connectors.length === 0 && (
-                                <div className="no-connectors">
-                                    No wallets found. Install Xverse.
-                                </div>
                             )}
                         </div>
                     ) : (
