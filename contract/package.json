@@ -4,15 +4,20 @@
   "description": "BitBond smart contracts",
   "scripts": {
     "compile": "hardhat compile",
-    "deploy": "hardhat deploy --network regtest",
-    "deploy:mainnet": "hardhat deploy --network mainnet",
+    "deploy": "hardhat run scripts/deploy.ts --network regtest",
+    "deploy:mainnet": "hardhat run scripts/deploy.ts --network mainnet",
     "verify": "hardhat verify --network regtest",
     "test": "hardhat test",
     "clean": "hardhat clean"
   },
   "devDependencies": {
-    "@midl/hardhat-deploy": "^1.0.0",
+    "@midl/executor": "^3.0.3",
+    "@midl/hardhat-deploy": "^3.0.3",
     "@nomicfoundation/hardhat-toolbox": "^5.0.0",
-    "hardhat": "^2.22.0"
+    "@nomicfoundation/hardhat-verify": "^2.0.0",
+    "@typechain/hardhat": "^9.1.0",
+    "hardhat": "^2.22.0",
+    "hardhat-deploy": "^0.12.0",
+    "typechain": "^8.3.0"
   }
 }

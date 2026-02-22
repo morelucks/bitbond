@@ -1,9 +1,11 @@
+import "@nomicfoundation/hardhat-toolbox";
 import "@typechain/hardhat";
-import "@midl/hardhat-deploy";
 import "hardhat-deploy";
 import "@nomicfoundation/hardhat-verify";
 import { vars, type HardhatUserConfig } from "hardhat/config";
 import { midlRegtest } from "@midl/executor";
+
+const MNEMONIC = vars.get("MNEMONIC", "test test test test test test test test test test test junk");
 
 const config: HardhatUserConfig = {
     solidity: {
@@ -12,19 +14,13 @@ const config: HardhatUserConfig = {
             optimizer: { enabled: true, runs: 200 },
         },
     },
-    midl: {
-        networks: {
-            regtest: {
-                mnemonic: vars.get("MNEMONIC", ""),
-                confirmationsRequired: 1,
-                btcConfirmationsRequired: 1,
-            },
-        },
-    },
     networks: {
         regtest: {
             url: midlRegtest.rpcUrls.default.http[0],
             chainId: midlRegtest.id,
+            accounts: {
+                mnemonic: MNEMONIC,
+            },
         },
     },
     etherscan: {
