@@ -12,8 +12,7 @@ interface HeaderProps {
 
 export function Header({ onDashboardClick, onHomeClick, onCreateClick }: HeaderProps) {
     const { accounts, isConnected } = useAccounts();
-    // useConnect requires purposes argument in this version of @midl/react
-    const { connectors, connect, error } = useConnect({
+    const { connectors, connect, error, isPending } = useConnect({
         purposes: [AddressPurpose.Ordinals, AddressPurpose.Payment]
     });
     const { disconnect } = useDisconnect();
@@ -21,13 +20,19 @@ export function Header({ onDashboardClick, onHomeClick, onCreateClick }: HeaderP
 
     // Debug logging
     useEffect(() => {
-        console.log("Wallet state:", { isConnected, accounts, connectors: connectors.length });
+        console.log("Wallet state:", { 
+            isConnected, 
+            accounts, 
+            accountsLength: accounts?.length,
+            firstAccount: accounts?.[0],
+            connectors: connectors.length 
+        });
         console.log("Xverse available:", typeof window !== 'undefined' ? !!(window as any).XverseProviders : false);
     }, [isConnected, accounts, connectors]);
 
     const btcAddress = accounts?.[0]?.address;
     const shortAddr = btcAddress
-        ? `${btcAddress.slice(0, 8)}…${btcAddress.slice(-6)}`
+        ? `${btcAddress.slice(0, 6)}...${btcAddress.slice(-4)}`
         : "";
 
     const handleConnect = async (connectorId: string) => {
@@ -47,7 +52,17 @@ export function Header({ onDashboardClick, onHomeClick, onCreateClick }: HeaderP
                 return;
             }
             
-            await connect({ id: connectorId });
+            const result = await connect({ 
+                id: connectorId
+            });
+            
+            console.log("Connection result:", result);
+            
+            // Wait a bit for accounts to populate
+            setTimeout(() => {
+                console.log("Accounts after connection:", accounts);
+            }, 1000);
+            
             toast.success("Wallet Connected!");
         } catch (err: any) {
             console.error("Connect error:", err);
@@ -99,9 +114,14 @@ export function Header({ onDashboardClick, onHomeClick, onCreateClick }: HeaderP
                 </nav>
 
                 <div className="wallet-section">
-                    {!isConnected ? (
+                    {!isConnected || !btcAddress ? (
                         <div className="connectors">
-                            {connectors.length > 0 ? (
+                            {isPending ? (
+                                <button className="btn btn-wallet" disabled>
+                                    <span className="wallet-icon">⏳</span>
+                                    Connecting...
+                                </button>
+                            ) : connectors.length > 0 ? (
                                 connectors.map((connector) => (
                                     <button
                                         key={connector.id}
