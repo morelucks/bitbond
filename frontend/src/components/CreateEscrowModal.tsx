@@ -1,5 +1,4 @@
 import { useState } from "react";
-import { useAccounts } from "@midl/react";
 import {
     useAddTxIntention,
     useFinalizeBTCTransaction,

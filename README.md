@@ -8,12 +8,24 @@ Trustless agreements sealed on-chain. Funds locked in a smart contract. Released
 
 ---
 
-## 🚀 Live Demo
+## 🚀 Project Structure
 
-> Demo available in submission video — full flow from wallet connection to on-chain fund release.
-
-- **Block Explorer:** [blockscout.staging.midl.xyz](https://blockscout.staging.midl.xyz)
-- **Network:** Midl Regtest (Bitcoin-native EVM)
+```
+bitbond/
+├── frontend/          # React + TypeScript UI
+│   ├── src/
+│   │   ├── components/
+│   │   ├── config/
+│   │   └── contracts/
+│   └── package.json
+│
+├── contract/          # Solidity smart contracts
+│   ├── BitBondEscrow.sol
+│   ├── deploy/
+│   └── hardhat.config.ts
+│
+└── README.md
+```
 
 ---
 
@@ -34,22 +46,35 @@ Trustless agreements sealed on-chain. Funds locked in a smart contract. Released
 
 ---
 
-## 🧠 How It Works
+## 🚀 Quick Start
 
-### 1️⃣ Client Creates Escrow
-Client inputs freelancer address, payment amount, work description, and deadline. Signs via Xverse → funds locked in BitBondEscrow contract.
+### Prerequisites
+- Node.js 18+
+- [Xverse Wallet](https://www.xverse.app) browser extension
+- Midl Regtest BTC (claim from [faucet.midl.xyz](https://faucet.midl.xyz))
 
-### 2️⃣ Smart Contract Stores Agreement
-Funds are held securely in contract storage. No admin. No backdoor.
+### 1. Deploy Smart Contract
 
-### 3️⃣ Freelancer Completes Work
-Freelancer delivers work off-chain.
+```bash
+cd contract
+npm install
+npx hardhat vars set MNEMONIC
+npm run deploy
+```
 
-### 4️⃣ Client Approves
-Client clicks **"Approve & Release Funds"** → contract transfers funds directly to the freelancer.
+Copy the deployed contract address.
 
-### 5️⃣ UI Updates
-Status changes to **RELEASED**, TX hash displayed, explorer link provided.
+### 2. Run Frontend
+
+```bash
+cd frontend
+npm install --legacy-peer-deps
+
+# Update contract address in src/contracts/BitBondEscrow.ts
+npm run dev
+```
+
+Open [http://localhost:5173](http://localhost:5173)
 
 ---
 
@@ -111,49 +136,6 @@ Status changes to **RELEASED**, TX hash displayed, explorer link provided.
 | EVM Interaction | Wagmi v2 + Viem |
 | Styling | Vanilla CSS (dark mode, glassmorphism) |
 | Network | Midl Regtest |
-
----
-
-## 🚀 Getting Started
-
-### Prerequisites
-- Node.js 18+
-- [Xverse Wallet](https://www.xverse.app) browser extension
-- Midl Regtest BTC (claim from [faucet.midl.xyz](https://faucet.midl.xyz))
-
-### Install
-
-```bash
-git clone https://github.com/morelucks/bitbond
-cd bitbond
-npm install --legacy-peer-deps
-```
-
-### Deploy Contract
-
-```bash
-# Set your BIP39 mnemonic
-npx hardhat vars set MNEMONIC
-
-# Get your addresses
-npx hardhat midl:address
-
-# Deploy to Midl Regtest
-npx hardhat deploy --network regtest
-
-# Verify on Blockscout
-npx hardhat verify <CONTRACT_ADDRESS> --network regtest
-```
-
-After deployment, update `src/contracts/BitBondEscrow.ts` with your contract address.
-
-### Run Frontend
-
-```bash
-npm run dev
-```
-
-Open [http://localhost:5173](http://localhost:5173)
 
 ---
 
