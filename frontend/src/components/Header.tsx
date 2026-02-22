@@ -20,17 +20,16 @@ export function Header({ onDashboardClick, onHomeClick, onCreateClick }: HeaderP
 
     // Debug logging
     useEffect(() => {
-        console.log("Wallet state:", { 
+        console.log("🔍 Wallet Debug:", { 
             isConnected, 
-            accounts, 
-            accountsLength: accounts?.length,
+            accountsCount: accounts?.length || 0,
             firstAccount: accounts?.[0],
-            connectors: connectors.length 
+            hasAddress: !!accounts?.[0]?.address
         });
-        console.log("Xverse available:", typeof window !== 'undefined' ? !!(window as any).XverseProviders : false);
-    }, [isConnected, accounts, connectors]);
+    }, [isConnected, accounts]);
 
-    const btcAddress = accounts?.[0]?.address;
+    const btcAddress = accounts?.[0]?.address || "";
+    const hasWallet = isConnected && btcAddress;
     const shortAddr = btcAddress
         ? `${btcAddress.slice(0, 6)}...${btcAddress.slice(-4)}`
         : "";
@@ -114,7 +113,7 @@ export function Header({ onDashboardClick, onHomeClick, onCreateClick }: HeaderP
                 </nav>
 
                 <div className="wallet-section">
-                    {!isConnected || !btcAddress ? (
+                    {!hasWallet ? (
                         <div className="connectors">
                             {isPending ? (
                                 <button className="btn btn-wallet" disabled>
