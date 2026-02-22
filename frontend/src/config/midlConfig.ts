@@ -2,7 +2,7 @@ import { createConfig, testnet, mainnet } from "@midl/core";
 import { xverseConnector } from "@midl/connectors";
 
 export const midlConfig = createConfig({
-    networks: [testnet, mainnet],
+    networks: [mainnet, testnet], // Mainnet first for production
     connectors: [xverseConnector()],
     persist: true,
 });
